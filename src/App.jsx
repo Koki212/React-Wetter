@@ -1,6 +1,6 @@
 /* src/App.jsx */
 import { TextField } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -12,9 +12,36 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 
 export default function App() {
-    const [location, setLocation] = useState("");
+    const [location, setLocation] = useState(
+        localStorage.getItem("location") || ""
+    );
     const [results, setResults] = useState([]);
     const navigate = useNavigate();
+
+    // search function ausgelagert, damit sie wiederverwendet werden kann
+    const search = async () => {
+        // Try-Catch Block für error handling
+        try {
+            // function encodeURIComponent für URL-taugliche Umwandlung der Eingabe (Ort)
+            const cleanLocation = encodeURIComponent(location.trim());
+            // fetch function für die Abfrage auf den Server
+            const response = await fetch(
+                `https://geocoding-api.open-meteo.com/v1/search?name=${cleanLocation}`
+            );
+            // Ergebnis soll als JSON interpretiert werden
+            const data = await response.json();
+            setResults(data.results);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+    // useEffect Hook für die Ausführung der search function
+    useEffect(() => {
+        if (location) {
+            search();
+        }
+    }, []);
+
     return (
         // Stack for nice looking -> Button and Textfield are the same high
         <Box
@@ -28,6 +55,7 @@ export default function App() {
                     label="Standort"
                     onChange={(event) => {
                         setLocation(event.target.value);
+                        localStorage.setItem("location", event.target.value);
                     }}
                     value={location}
                 />
@@ -35,24 +63,8 @@ export default function App() {
                     variant="contained"
                     size="large"
                     endIcon={<SendIcon />}
-                    onClick={async () => {
-                        // Try-Catch Block für error handling
-                        try {
-                            // function encodeURIComponent für URL-taugliche Umwandlung der Eingabe (Ort)
-                            const cleanLocation = encodeURIComponent(
-                                location.trim()
-                            );
-                            // fetch function für die Abfrage auf den Server
-                            const response = await fetch(
-                                `https://geocoding-api.open-meteo.com/v1/search?name=${cleanLocation}`
-                            );
-                            // Ergebnis soll als JSON interpretiert werden
-                            const data = await response.json();
-                            setResults(data.results);
-                        } catch (err) {
-                            console.error(err);
-                        }
-                    }}
+                    // in der onClick function wird die fuction search aufgerufen
+                    onClick={search}
                 >
                     Senden
                 </Button>
